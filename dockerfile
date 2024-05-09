@@ -1,27 +1,21 @@
 # Use an official Python runtime as the base image
-FROM python:3.8.13-slim
+FROM python:3.9-slim
 
-# Set the working directory in the container
+# Set the working directory in the container to /app
 WORKDIR /app
 
-# # Copy the requirements file into the container
-# COPY requirements.txt .
+# Install Poetry
+RUN pip install poetry
 
-# # Install the Python dependencies
-# RUN pip install --no-cache-dir -r requirements.txt
+# Copy only requirements to cache them in docker layer
+COPY pyproject.toml /app/
 
-# Install conda and additional packages
-RUN apt-get update && apt-get install -y wget && \
-    wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    /bin/bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda && \
-    rm Miniconda3-latest-Linux-x86_64.sh && \
-    /opt/conda/bin/conda install -c pytorch pytorch=1.10.0 torchvision cudatoolkit=11.3 -y && \
-    /opt/conda/bin/conda install -c conda-forge jupyterlab torchinfo torchmetrics -y && \
-    /opt/conda/bin/conda install -c anaconda pip -y && \
-    /opt/conda/bin/conda install pandas matplotlib scikit-learn -y
+# Install project dependencies
+RUN poetry config virtualenvs.create false \
+  && poetry install --no-interaction --no-ansi
 
-# Copy the rest of the application code into the container
-COPY . .
+# Make port 8888 available to the world outside this container
+EXPOSE 8888
 
 # Set the command to run your application
-CMD [ "python", "app.py" ]
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
